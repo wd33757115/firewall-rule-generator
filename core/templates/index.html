@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>防火墙配置生成器</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .message { color: #27ae60; font-weight: bold; }
+        .error { color: #c0392b; font-weight: bold; }
+        form { margin: 20px 0; }
+        label { font-size: 14px; margin-right: 10px; }
+        input[type="file"], input[type="text"] {
+            padding: 5px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        input[type="submit"], button {
+            background-color: #3498db;
+            color: white;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        input[type="submit"]:hover, button:hover {
+            background-color: #2980b9;
+        }
+        .logout-btn, .delete-btn {
+            background-color: #e74c3c;
+            margin-left: 10px;
+        }
+        .logout-btn:hover, .delete-btn:hover {
+            background-color: #c0392b;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #ecf0f1;
+            color: #2c3e50;
+        }
+        a { text-decoration: none; color: #3498db; }
+        a:hover { text-decoration: underline; }
+    </style>
+    <script>
+        function updateAction() {
+            var userId = "{{ user_id }}";
+            var pattern = document.getElementById('pattern').value;
+            var form = document.getElementById('downloadForm');
+            form.action = "/download-config/" + userId + "/" + encodeURIComponent(pattern);
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>防火墙配置生成器</h1>
+        <p>当前用户: {{ user_id }} <a href="/logout"><button class="logout-btn">注销</button></a></p>
+
+        <form method="post" enctype="multipart/form-data">
+            <label for="policies_file">上传工单文件 (policies_simple.xlsx):</label><br>
+            <input type="file" name="policies_file" accept=".xlsx" required><br><br>
+            <label for="topology_file">上传拓扑文件 (默认 topology_simple.json, 可选):</label><br>
+            <input type="file" name="topology_file" accept=".json"><br><br>
+            <input type="submit" value="生成配置">
+        </form>
+
+        {% if message %}
+            <p class="{% if '失败' in message %}error{% else %}message{% endif %}">{{ message }}</p>
+        {% endif %}
+
+        <h2>下载配置文件</h2>
+        <form id="downloadForm" action="/download-config/{{ user_id }}" method="get" onsubmit="updateAction()">
+            <label for="pattern">正则表达式:</label>
+            <input type="text" id="pattern" name="pattern" value=".*" required>
+            <input type="submit" value="查询匹配文件">
+        </form>
+
+        <form method="post" action="/delete-configs/{{ user_id }}">
+            <button type="submit" class="delete-btn">删除所有配置文件</button>
+        </form>
+
+        {% if files %}
+            <h3>匹配的文件:</h3>
+            <table>
+                <tr>
+                    <th>文件名</th>
+                    <th>操作</th>
+                </tr>
+                {% for file in files %}
+                    <tr>
+                        <td>{{ file.filename }}</td>
+                        <td><a href="{{ file.download_url }}"><button>下载</button></a></td>
+                    </tr>
+                {% endfor %}
+            </table>
+            <p><a href="/download-config-zip/{{ user_id }}/{{ request.args.get('pattern', '.*') }}"><button>下载所有文件 (ZIP)</button></a></p>
+        {% endif %}
+    </div>
+</body>
+</html>
